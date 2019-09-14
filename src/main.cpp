@@ -15,7 +15,7 @@
 
 //byte PWM_PIN = 3;
 Servo Lenkung;
-
+Servo Motor;
 //////Compass stuff
 // compass compass;
 HMC5883L compass;
@@ -28,56 +28,196 @@ int point = 0;
 //gps
 int gpsSat = 0;
 long dist = 0;
+long olddist = 0;
 int Test = 0;
 int obstacle_avoid_angle = 0;
+int Toleranz = 0;
+int speed = 0;
+int obstacle_state = 0;
+int pwm;
+int diff = -025;
+int fix_Motor = 0;
+int old_pwm ;
+int changed = 0;
+int state_changed = 0;
 
 //Die Task für die ultrasonic_Sensors
 void taskOne(void * parameter ){
   for(;;){
-    
-    digitalWrite(tri_ultrasinic_FL, LOW);
-    
-    delayMicroseconds(2);
-    // Sets the trigPin on HIGH state for 10 micro seconds
-    digitalWrite(tri_ultrasinic_FL, HIGH);
-    
-    delayMicroseconds(10);
-    digitalWrite(tri_ultrasinic_FL, LOW);
-    
-    // Reads the echoPin, returns the sound wave travel time in microseconds
-    durationFL = pulseIn(echo_ultrasinic_FL, HIGH);
-    // Calculating the distance
-    distanceFL = durationFL*0.034/2;
+    //front left
 
-    digitalWrite(tri_ultrasinic_FR, LOW);
+
+
+    // digitalWrite(tri_ultrasonic_FL, LOW);
+    // delayMicroseconds(2);
+    // // Sets the trigPin on HIGH state for 10 micro seconds
+    // digitalWrite(tri_ultrasonic_FL, HIGH);
     
-    delayMicroseconds(2);
-    digitalWrite(tri_ultrasinic_FR, HIGH);
-    delayMicroseconds(10);
+    // delayMicroseconds(10);
+    // digitalWrite(tri_ultrasonic_FL, LOW);
     
-    digitalWrite(tri_ultrasinic_FR, LOW);
-    durationFR = pulseIn(echo_ultrasinic_FR, HIGH);
-    // Calculating the distance
-    distanceFR = durationFR*0.034/2;
-    // Prints the distance on the Serial Monitor
+    // // Reads the echoPin, returns the sound wave travel time in microseconds
+    // durationFL = pulseIn(echo_ultrasonic_FL, HIGH);
+    // // Calculating the distance
+    // distanceFL = durationFL*0.034/2;
+
+    // digitalWrite(tri_ultrasonic_FR, LOW);
+    // //front right
+    // delayMicroseconds(2);
+    // digitalWrite(tri_ultrasonic_FR, HIGH);
+    // delayMicroseconds(10);
+    
+    // digitalWrite(tri_ultrasonic_FR, LOW);
+    // durationFR = pulseIn(echo_ultrasonic_FR, HIGH);
+    // // Calculating the distance
+    // distanceFR = durationFR*0.034/2;
+
+     for (uint8_t i = 0; i < SONAR_NUM; i++) { // Loop through each sensor and display results.
+    delay(50); // Wait 50ms between pings (about 20 pings/sec). 29ms should be the shortest delay between pings.
+    // Serial.print(i);
+    // Serial.print("=");
+    // Serial.print(sonar[i].ping_cm());
+    // Serial.print("cm ");
     obstacle_avoid_angle = 0;
-    if(distanceFL <= 50){
-      
-      obstacle_avoid_angle -= 100 - distanceFL;
-      // Serial.print("Avoid angle FL = ");
-      // Serial.println(distanceFL);
+    if(i == 0){
+        distanceFL = sonar[i].ping_cm();
     }
-     if(distanceFR <= 50){
-      
-      obstacle_avoid_angle += 100 - distanceFR;
-      // Serial.print("Avoid angle FR= ");
-      // Serial.println(distanceFR);
+    else{
+        distanceFR = sonar[i].ping_cm();
     }
+   
+   }
+    // Serial.println();
+
+
+  
+  obstacle_avoid_angle = 0;
+    if(distanceFL <= 70 && distanceFL >= 1){
+      obstacle_avoid_angle += map(distanceFL,0,100,100,0);
+      //obstacle_avoid_angle += 70 - distanceFL;
+      //Serial.print("Avoid angle FL = ");
+      //Serial.println(distanceFL);
+    
+      //Serial.println("________________________________________________________________");
+    }
+    if(distanceFR <= 70 && distanceFR >= 1){
+    
+      obstacle_avoid_angle -= map(distanceFL,0,100,100,0);
+     
+    }
+   
+
+
+    //Middel
+    // digitalWrite(tri_ultrasonic_M, LOW);
+    // delayMicroseconds(2);
+    // digitalWrite(tri_ultrasonic_M, HIGH);
+    // delayMicroseconds(10);
+    
+    // digitalWrite(tri_ultrasonic_M, LOW);
+    // durationM = pulseIn(echo_ultrasonic_M, HIGH);
+    // // Calculating the distance
+    // distanceM = durationM*0.034/2;
+    // Serial.println(distanceM);
+    // Serial.print("Car: ");
+    // Serial.println(Car_Break);
+    // Serial.println(distanceFL);
+    // Serial.println(distanceFR);
+    // if(distanceM <= 20 && distanceM >=1 && Car_Break == 0){
+      
+    //   Motor.write(70);
+    //   Car_Break = 1;
+    //   // Serial.println("ok");
+     
+
+    // }else{
+    //     Car_Break = 0;
+    // }
+    // Prints the distance on the Serial Monitor
+  
+    	int pwm = pulseIn(19,HIGH);
+      pwm = map(pwm, 994, 1988, 50, 125);
+      int pwm_fix = pulseIn(34,HIGH);
+       
+      pwm_fix = map(pwm_fix, 994, 1988, 50, 125);
+      // Serial.println(pwm_fix);
+      // Serial.println("PWM: ");
+      // Serial.println(pwm);
+      // Serial.println(fix_Motor);
+      if(fix_Motor == 0 && pwm != -25){
+      
+        Motor.write(pwm);
+        old_pwm = pwm;
+       
+      }
+      else{
+        fix_Motor = 1;
+       
+        Motor.write(old_pwm);
+
+      }
+      // Serial.print("changed: ");
+      // Serial.println(changed);
+      if(pwm_fix <= 94 && pwm_fix>= 88){
+        if(changed == 0){
+         fix_Motor = 0;
+        }
+        if(changed == 1){
+          changed = 2;
+        
+        }if(changed == 3){
+          changed = 0;
+        
+        }
+        
+      }
+      else{
+         fix_Motor = 1;
+         
+          
+          if(changed == 0)
+          {
+            changed = 1;
+            
+           
+          }
+          if(changed == 2){
+           changed = 3;
+           Motor.write(70);
+           
+          }
+        
+      }
+      if( pwm <= 93 && pwm >= 85 ){
+            
+           
+      }
+       else{
+            if(changed != 2){
+
+            }else{
+            Motor.write(70);
+            delay(5000);
+            changed = 0;
+            }
+      //   //  Car_Break = 1;
+      }
+      
+      //obstacle_avoid_angle -= 100 - distanceFR;
+      //Serial.print("Avoid angle FR= ");
+      //Serial.println(distanceFR);
+    
+
+    // if(distanceM <= 20){
+      
+    // }
+     delay(10);
+    //Serial.println("avoid angle == ");
    //Serial.println(obstacle_avoid_angle);
   }
    vTaskDelete( NULL );
-}
-//Funktion zum berechnen der Distanz
+} 
+//Funktion zum Berechnen der Distanz
 float geoDistance(double lat, double lon, double lat2, double lon2)
 {
   const float R = 6371000; // km
@@ -91,7 +231,7 @@ float geoDistance(double lat, double lon, double lat2, double lon2)
 
   return R * y;
 }
-//Berechnen der Kompass Daten OHNE die Neigung zu korrigieren
+//Berechnen der Kompassdaten OHNE die Neigung zu korrigieren
 float noTiltCompensate(Vector mag)
 {
   float heading = atan2(mag.YAxis, mag.XAxis);
@@ -142,7 +282,7 @@ float correctAngle(float heading)
 
   return heading;
 }
-//Den Winkel zwischen aktuelle Position und Ziel berechnen
+//Den Winkel zwischen aktueller Position und Ziel berechnen
 double getBearing(double lat1, double lng1, double lat2, double lng2)
 {
   lat1 = radians(lat1);
@@ -209,13 +349,16 @@ void setup()
   // Serial.print(destinationlon);
   // DEBUG_PORT.println();
   //
-  //compass.setOffset(0,0)
+  // compass.setOffset(0,0);
+  Motor.attach(18);
+  Motor.write(90);
   calculate_offsets();
-  compass.setOffset(offX, offY);
-
+  compass.setOffset(offX, offY); 
+  pinMode(19,INPUT);
+  pinMode(34,INPUT);
   start_up();
-
-  Lenkung.attach(5);
+ 
+  Lenkung.attach(5);  
   Lenkung.write(90);
 
   ///
@@ -251,6 +394,14 @@ void loop()
         initializePath();
         point = 0;
     }
+    else if(Route == "obstacle_avoid_ON"){
+        obstacle_state = 0;
+
+    }
+    else if(Route == "obstacle_avoid_OFF"){
+        obstacle_state = 1;
+    
+    }
     else{
         DynamicJsonBuffer jsonBuffer;
         JsonObject& root = jsonBuffer.parseObject(Route);
@@ -261,35 +412,24 @@ void loop()
         displayPath();
     }
   }
-   if(ptr != NULL){
+   if(ptr != NULL && Car_Break == 0){
    //if (ss.available() > 0 ){
     smartDelay(0);
     lat = gps.location.lat();
     lon = gps.location.lng();
     dist = geoDistance(lat, lon, ptr->lat, ptr->lon);
+    speed = gps.speed.kmph();
     print(gps.satellites.value(), gps.satellites.isValid(), 5);
     print(gps.location.lat(), gps.location.isValid(), 10, 6); //eigentlich 10 zu 6
     print(gps.location.lng(), gps.location.isValid(), 11, 6);
     print(dist, true, 4);
     print(point,true, 3);
     
-    // int pin = digitalRead(4);
-    // if(pin == LOW){
-    //   way1.lat = lat;
-    //   way1.lon = lon;
-    //   Serial.println("Set homepoint");
-    //  }
-    // print(dist  , 123,3);
-    DEBUG_PORT.println();
-    // gpsSat = fix.satellites;
-    // dist = geoDistance(lat, lon,destinationlat ,destinationlon);
-    // Serial.print(" Dist ");
-    // Serial.println(dist);
-    //Serial.print("GPS = ");
-    // Serial.println(gpsSat);
     
- 
-    if (dist <= 1)
+    DEBUG_PORT.println();
+  
+
+    if (dist <= 2)
     { 
       ptr = ptr->next; 
       destinationlat = ptr->lat;
@@ -297,45 +437,7 @@ void loop()
       point += 1;
       
     }
- 
-  
-    // if (geoDistance(lat, lon, way2.lat, way2.lon) < 1)
-    // {
-    //   destinationlat = way1.lat;
-    //   destinationlon = way1.lon;
-    //   point = 2;
-    // }
-    // if (geoDistance(lat, lon, way3.lat, way3.lon) < 1)
-    // {
-    //   destinationlat = way2.lat;
-    //   destinationlon = way2.lon;
-    //   point = 3;
-    // }
-    // if (geoDistance(lat, lon, way4.lat, way4.lon) < 1)
-    // {
-    //   destinationlat = way5.lat;
-    //   destinationlon = way5.lon;
-    //   point = 4;
-    // }
-    // if (geoDistance(lat, lon, way5.lat, way5.lon) < 1)
-    // {
-    //   destinationlat = way6.lat;
-    //   destinationlon = way6.lon;
-    //   point = 5;
-    // }
-    // int val = digitalRead(4);
-    // if(val == 1){
-    //      destinationlat =lat;
-    //      destinationlon = lon;
-    // }
-
-    //dist = geoDistance(lat, lon, destinationlat, destinationlon);
-
-    // Serial.print("dist =");
-    // Serial.println(dist);
-
-    // Serial.println(targetHeading);
-  //}
+    
 
   Vector mag = compass.readNormalize();
   Vector acc = accelerometer.readScaled();
@@ -393,8 +495,11 @@ void loop()
   //   //Serial.print("jetzt =");
   //  // Serial.println(turn);
   // }
-  int autoSteer = map(turn, 180, -180, 190, -10); //Hier habe ich Veränderungen vorgenommen
+
+  int autoSteer = map(turn, 180, -180, 210, -30); //Hier habe ich Veränderungen vorgenommen
+  if(obstacle_state == 0){
   autoSteer +=  obstacle_avoid_angle;
+  }
   autoSteer = constrain(autoSteer, 10, 170);//alte Werte sind 50 bis 130
 
   float angleError = abs(turn);
@@ -428,6 +533,7 @@ void loop()
   
   Lenkung.write(autoSteer);
 
+
   //print GPS Data
   // display.setTextColor(WHITE);
   // display.setCursor(0, 0);
@@ -441,28 +547,26 @@ void loop()
   // display.print(point);
   // display.display();
    }
-   else{ //when no route is in the linked list
-      Lenkung.write(90);
+   else{ //when there is no route in the linked list
+    Lenkung.write(90);
+    
+      // int turn = 0;
+      // int autoSteer = map(turn, 180, -180, 190, -10); //Hier habe ich Veränderungen vorgenommen
+      // autoSteer +=  obstacle_avoid_angle;
+      // autoSteer = constrain(autoSteer, 10, 170);//alte Werte sind 50 bis 130
+      // Lenkung.write(autoSteer);
+      // Serial.print("AutoSteer");
+      // Serial.println(autoSteer);
       //if (ss.available() > 0 ){
     smartDelay(0);
-    //gps_gps gps = gps.read();
-    lat = gps.location.lat();
-    lon = gps.location.lng();
+
     dist = 0;
 
     
 
-    print(gps.satellites.value(), gps.satellites.isValid(), 5);
-    print(gps.location.lat(), gps.location.isValid(), 10, 6); //eigentlich 10 zu 6 gewechselt zu 11
-    print(gps.location.lng(), gps.location.isValid(), 11, 6);//eigentlich 11 gewechselt zu 12
-
-    //print(             gps.hdop/1000.0      , gps.valid.hdop      , 6, 2          );
-    // print(fix.satellites, fix.valid.satellites, 3);
-    // print(fix.latitude(), fix.valid.location, 10, 6);
-    // print(fix.longitude(), fix.valid.location, 11, 6);
-    print(dist, true, 3);
-    print(point,true, 3);
-    DEBUG_PORT.println();
+    
+    
+  
   //}
 }
 }
